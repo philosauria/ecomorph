@@ -1,0 +1,133 @@
+#######################################################################################
+##################################RESAMPLING PROCEDURE#################################
+####################SOURCE CODE FOR RESAMPLING SEMILANDMARKS IN ONE SPECIMEN###########
+#######################################################################################
+
+
+setwd("~/Desktop/MorphometricsR_TS/landmarks_data_R_2/allturtles_complete_data") #set directory
+library(rgl)
+library(geomorph) 
+
+
+#plot it in 3D to control the specimen
+plot3d(turt1[,6], turt1[,7], turt1[,8], aspect="iso")
+
+#isolate landmarks first
+turtland <- turt1[1:10,] #first ten lines are landmarks
+
+#isolate semilandmarks
+turtsemiland <- turt1[11:nrow(turt1),] #semilandmarks for resampling
+
+#write new documents with landmarks and semilandmarks
+write.csv(turtsemiland, file = "turtsemiland.csv")
+
+#open semilandmarks file
+turt3 <- read.table(file = "turtsemiland.csv", header = F, sep=",", skip = 1)[1:nrow(turtsemiland),]
+
+#split the different curves by names
+splitsemi <- split(turt3, factor(turt3$V3, levels = unique(turt3$V3))) #delete duplicates
+length(splitsemi) #control nb of curves
+
+#give a list of the semilandmarks curves. In this dataset, we expect 12 of them
+ls(splitsemi)
+
+#REARRANGE SEMILANDMARKS#
+
+#we erase the names of the colonnes
+(unname(turtland, force = FALSE))
+
+#creation of a matrix
+turtland<-as.matrix(turtland)
+
+
+######RESAMPLING 12 CURVES########
+
+#Curve1
+landm1<-data.frame(splitsemi$L_marginals[7:9]) #we isolate this curve
+land1<-matrix(unlist(landm1), nrow(splitsemi$L_marginals), 3) 
+semiland1<-digit.curves(land1[1,], land1, nPoints=38, closed = FALSE) #resampling of the curve
+semiland1 #to control the number of semilandmarks
+
+#Curve2
+landm2<-data.frame(splitsemi$R_marginals[7:9])
+land2<-matrix(unlist(landm2), nrow(splitsemi$R_marginals), 3)
+semiland2<-digit.curves(land2[1,], land2, nPoints=38, closed = FALSE)
+semiland2
+
+#Curve3
+landm3<-data.frame(splitsemi$Vertebrals[7:9])
+land3<-matrix(unlist(landm3), nrow(splitsemi$Vertebrals), 3)
+semiland3<-digit.curves(land3[1,], land3, nPoints=28, closed = FALSE)
+semiland3
+
+#Curve4
+landm4<-data.frame(splitsemi$L_epi_hyo[7:9])
+land4<-matrix(unlist(landm4), nrow(splitsemi$L_epi_hyo), 3)
+semiland4<-digit.curves(land4[1,], land4, nPoints=13, closed = FALSE)
+semiland4
+
+#Curve5
+landm5<-data.frame(splitsemi$L_hyo_hypo[7:9])
+land5<-matrix(unlist(landm5), nrow(splitsemi$L_hyo_hypo), 3)
+semiland5<-digit.curves(land5[1,], land5, nPoints=8, closed = FALSE)
+semiland5
+
+#Curve6
+landm6<-data.frame(splitsemi$L_hypo_xiphi[7:9])
+land6<-matrix(unlist(landm6), nrow(splitsemi$L_hypo_xiphi), 3)
+semiland6<-digit.curves(land6[1,], land6, nPoints=8, closed = FALSE)
+semiland6
+
+#Curve7
+landm7<-data.frame(splitsemi$R_hypo_xiphi[7:9])
+land7<-matrix(unlist(landm7), nrow(splitsemi$R_hypo_xiphi), 3)
+semiland7<-digit.curves(land7[1,], land7, nPoints=8, closed = FALSE)
+semiland7
+
+#Curve8
+landm8<-data.frame(splitsemi$R_hyo_hypo[7:9])
+land8<-matrix(unlist(landm8), nrow(splitsemi$R_hyo_hypo), 3)
+semiland8<-digit.curves(land8[1,], land8, nPoints=8, closed = FALSE)
+semiland8
+
+#Curve9
+landm9<-data.frame(splitsemi$R_epi_hyo[7:9])
+land9<-matrix(unlist(landm9), nrow(splitsemi$R_epi_hyo), 3)
+semiland9<-digit.curves(land9[1,], land9, nPoints=13, closed = FALSE)
+semiland9
+
+#Curve10
+landm10<-data.frame(splitsemi$longueur_plastron[7:9])
+land10<-matrix(unlist(landm10), nrow(splitsemi$longueur_plastron), 3)
+semiland10<-digit.curves(land10[1,], land10, nPoints=28, closed = FALSE)
+semiland10
+
+#Curve11
+landm11<-data.frame(splitsemi$largeur_plastron[7:9])
+land11<-matrix(unlist(landm11), nrow(splitsemi$largeur_plastron), 3)
+semiland11<-digit.curves(land11[1,], land11, nPoints=13, closed = FALSE)
+semiland11
+
+#Curve12
+landm12<-data.frame(splitsemi$largeur_shell[7:9])
+land12<-matrix(unlist(landm12), nrow(splitsemi$largeur_shell), 3)
+semiland12<-digit.curves(land12[1,], land12, nPoints=28, closed = FALSE)
+semiland12
+
+#plotting to control the curves
+plot3d(semiland1[,1], semiland1[,2], semiland1[,3], aspect="iso", add=TRUE)
+plot3d(semiland2[,1], semiland2[,2], semiland2[,3], aspect="iso", add=TRUE)
+plot3d(semiland3[,1], semiland3[,2], semiland3[,3], aspect="iso", add=TRUE)
+plot3d(semiland4[,1], semiland4[,2], semiland4[,3], aspect="iso", add=TRUE)
+plot3d(semiland5[,1], semiland5[,2], semiland5[,3], aspect="iso", add=TRUE)
+plot3d(semiland6[,1], semiland6[,2], semiland6[,3], aspect="iso", add=TRUE)
+plot3d(semiland7[,1], semiland7[,2], semiland7[,3], aspect="iso", add=TRUE)
+plot3d(semiland8[,1], semiland8[,2], semiland8[,3], aspect="iso", add=TRUE)
+plot3d(semiland9[,1], semiland9[,2], semiland9[,3], aspect="iso", add=TRUE)
+plot3d(semiland10[,1], semiland10[,2], semiland10[,3], aspect="iso", add=TRUE)
+plot3d(semiland11[,1], semiland11[,2], semiland11[,3], aspect="iso", add=TRUE)
+plot3d(semiland12[,1], semiland12[,2], semiland12[,3], aspect="iso", add=TRUE)
+
+#create a list with all the curves
+finish <- bindArr(semiland1, semiland2,semiland3, semiland4,semiland5,semiland6,semiland7,semiland8,semiland9,semiland10,semiland11,semiland12, along=1)
+
