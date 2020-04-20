@@ -4,7 +4,7 @@
 #######################################################################################
 
 
-setwd("~/Desktop/MorphometricsR_TS/landmarks_data_R_2/allturtles_complete_data") #set directory
+setwd("...") #set directory
 library(rgl)
 library(geomorph)
 library(Morpho)
