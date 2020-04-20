@@ -6,7 +6,8 @@
 
 setwd("~/Desktop/MorphometricsR_TS/landmarks_data_R_2/allturtles_complete_data") #set directory
 library(rgl)
-library(geomorph) 
+library(geomorph)
+library(Morpho)
 
 
 #plot it in 3D to control the specimen
@@ -115,7 +116,7 @@ semiland12<-digit.curves(land12[1,], land12, nPoints=28, closed = FALSE)
 semiland12
 
 #plotting to control the curves
-plot3d(semiland1[,1], semiland1[,2], semiland1[,3], aspect="iso", add=TRUE)
+plot3d(semiland1[,1], semiland1[,2], semiland1[,3], aspect="iso")
 plot3d(semiland2[,1], semiland2[,2], semiland2[,3], aspect="iso", add=TRUE)
 plot3d(semiland3[,1], semiland3[,2], semiland3[,3], aspect="iso", add=TRUE)
 plot3d(semiland4[,1], semiland4[,2], semiland4[,3], aspect="iso", add=TRUE)
