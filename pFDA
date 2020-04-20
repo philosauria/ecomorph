@@ -1,0 +1,174 @@
+######################################################################################
+##################pFDA  - Code adapted from MONTANI and SCHMITZ 2011##################
+########################doi:10.1111/j.1558-5646.2011.01271.x##########################
+######################################################################################
+
+#call packages
+library(ape)
+library(class)
+library(geiger)
+library(lattice)
+library(mda)
+library(nnet)
+library(RColorBrewer)
+
+#set directory
+setwd("")
+source("phylo.fda.v0.2.R")
+
+#read consensus tree
+treA <- read.tree("ALL_EXTANT_TREE.tre")
+
+treA$tip.label
+if(!is.binary.tree(treA)) treA <- multi2di(treA, random = TRUE) 
+is.ultrametric(treA) #should be FALSE
+
+##########################
+#read PC Data and ecology categories
+COR<-read.csv("pca_allturtles_alldata.csv", header=TRUE, sep=";")
+CORN <- COR$species
+names (CORN) <- COR$species
+
+CORorder<-COR[match(treA$tip.label, names(CORN)),]
+
+ddA <- CORorder
+
+gA <- ddA$ecology 	#Grouping
+
+taxaA <- ddA$species
+rownames(ddA) <- taxaA 	# for later convenience
+
+XA <- ddA[,4:11] #PCA Data
+
+#for FOSSIL data
+
+testtaxa <- rownames(ddA[gA=="UKN",]) # UNKNOWN = FOSSIL DATA
+testtaxan <- row(ddA)[gA=="UKN",1]
+trainingtaxa <- rownames(ddA[-testtaxan,])
+X <- XA[-testtaxan,]
+dd <- ddA[-testtaxan,]
+g <- gA[-testtaxan]
+tre <- drop.tip(treA, testtaxa) 
+is.ultrametric(tre)
+
+############IF NOT BUT ALMOST###################
+force.ultrametric<-function(tree,method=c("nnls","extend")){
+    method<-method[1]
+    if(method=="nnls") tree<-nnls.tree(cophenetic(tree),tree,
+        rooted=TRUE,trace=0)
+    else if(method=="extend"){
+        h<-diag(vcv(tree))
+        d<-max(h)-h
+        ii<-sapply(1:Ntip(tree),function(x,y) which(y==x),
+            y=tree$edge[,2])
+        tree$edge.length[ii]<-tree$edge.length[ii]+d
+    } else 
+        cat("method not recognized: returning input tree\n\n")
+    tree
+}
+
+library(phangorn)
+tre<-force.ultrametric(tre) ## default method
+is.ultrametric(tre) #should be TRUE
+
+##########################
+########LAMBDA############
+##########################
+filename_stem <- "HABITAT.optLambda"
+ol1 <- optLambda(X,g,tre,idc=filename_stem) #UNKNOWN TAXA
+
+ol1$optlambda	#Lambda value
+
+######################################################################################
+###############################PHYLOGENETIC DISCRIMINANT ANALYSIS#########################
+######################################################################################
+
+#SIMPLE
+optl <- 0	#!!!!!!!!Replace with the optimal lambda value from above!!!!!!
+pfda <- phylo.fda.pred(XA,gA,taxaA,treA,testtaxan,val=optl)
+
+pfda$confusion
+
+pfda$testprediction
+
+#Save table
+write.csv(pfda$confusion, "ALLDATA_Cross-classification-confusion matrix.csv")
+write.csv(pfda$testprediction, "ALLDATA_prediction_matrix.csv")
+
+################################
+test.class <- as.character(predict(pfda, pfda$DATAtest, type="class"))
+test.variates <- predict(pfda, pfda$DATAtest, type="variates")
+test.prob <- predict(pfda, pfda$DATAtest, type="posterior")
+test.results <- cbind(test.class, test.prob, test.variates)
+
+#colnames(test.results)<- c("predicted class", "P(fins)", "P(notwebbed)", "P(redwebbed)", "P(paddle)","P(webbed)","DA1","DA2","DA3","DA4")
+
+colnames(test.results)<- c("predicted class","FME", "FUA", "SEA", "SET", "TER","DA1","DA2","DA3","DA4")
+
+rownames(test.results) <- testtaxa
+head(test.results)
+
+write.csv(test.results, "ALLDATA_PREDICTIONS_VALUES.csv")
+
+##################################
+training.class <- as.character(predict(pfda, pfda$DATA, type="class"))
+training.variates <- predict(pfda, pfda$DATA, type="variates")
+training.prob <- predict(pfda, pfda$DATA, type="posterior")
+training.results <- cbind(as.character(g), training.class, training.prob, training.variates)
+colnames(training.results) <- c("true class", "predicted class", "P(fins)", "P(webbed)", "P(semiwebbed)","P(semiterrestrial)","P(terrestrial)","DA1","DA2","DA3","DA4")
+rownames(training.results) <- trainingtaxa
+
+#Save table
+write.csv(training.results, "ALLDATA_TURTLE_PROBABILITY_HABITAT.csv")
+
+####################################
+###PLOT
+########
+training <- as.data.frame(cbind(training.variates, as.character(dd$ecology)))
+colnames(training) <- c("DA1","DA2","DA3","DA4","groups")
+rownames(training) <- dd$species
+
+####################################
+unknown <- as.character(rep("UKN", times=length(testtaxan)))
+test <- as.data.frame(cbind(test.variates, unknown))
+colnames(test) <- c("DA1","DA2","DA3","DA4","groups")
+rownames(test) <- testtaxa
+
+##################################
+#############################
+#scatter <- rbind(training, test) #REAL unknown taxa
+scatter <- training
+write.csv(scatter,"scatter_alldata.csv")
+
+scatter[, 1:2] <- lapply(scatter[,1:2], as.character)
+scatter[, 1:2] <- lapply(scatter[,1:2], as.numeric)
+######################
+
+######################
+GR1 <- scatter[scatter$groups=="TER",]
+GR2 <- scatter[scatter$groups=="SET",]
+GR3 <- scatter[scatter$groups=="SEA",]
+GR4 <- scatter[scatter$groups=="FUA",]
+GR5 <- scatter[scatter$groups=="FME",]
+GR6 <- scatter[scatter$groups=="UKN",]
+
+############################
+pdf('DA_alldata.pdf')
+plot(GR1$DA1, GR1$DA2,							#terrestrial
+      asp=1,
+      xlim=range(scatter[,1]),
+      ylim=range(scatter[,2]),
+      pch=21, col="black", bg="#ff7f00",
+      cex=2, cex.lab=1.5,
+      xlab="DA 1", ylab="DA 2"); 					
+
+points(GR2$DA1, GR2$DA2, pch=21, cex=2, col="black", bg="#984ea3"); 	#semi-terrestrial
+points(GR3$DA1, GR3$DA2, pch=21, cex=2, col="black", bg="#4daf4a");	#semi-aquatic
+points(GR4$DA1, GR4$DA2, pch=21, cex=2, col="black", bg="#377eb8");	#fully aquatic
+points(GR5$DA1, GR5$DA2, pch=21, cex=2, col="black", bg="#e41a1c");	#full marine environment
+points(GR6$DA1, GR6$DA2, pch=23, cex=2, col="black", bg="#ffff33"); 	#fossils
+box(lwd=2); axis(1, lwd=2, lwd.ticks=2); axis(2, lwd=2, lwd.ticks=2)
+
+dev.off()
+
+

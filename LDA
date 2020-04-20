@@ -1,0 +1,97 @@
+######################################################################################
+##########################LINEAR DISCRIMINANT ANALYSIS####################################
+######################################################################################
+
+library(MASS)
+library(RColorBrew)
+
+#read PC Data and ecology categories
+COR<-read.csv("pca_allturtles_alldata.csv", header=TRUE, sep=";")#5cat
+
+CORN <- COR$species
+names (CORN) <- COR$species
+
+CORorder<-COR[match(treA$tip.label, names(CORN)),]
+
+ddA <- CORorder
+#rownames(ddA) <- ddA$species
+
+############################
+gA <- ddA$ecology 	#Grouping
+
+taxaA <- ddA$species
+rownames(ddA) <- taxaA 	# for later convenience
+
+#for FOSSIL data
+
+testtaxa <- rownames(ddA[gA=="UKN",]) # UNKNOWN = FOSSIL DATA
+testtaxan <- row(ddA)[gA=="UKN",1]
+trainingtaxa <- rownames(ddA[-testtaxan,])
+X <- XA[-testtaxan,]
+dd <- ddA[-testtaxan,]
+g <- gA[-testtaxan]
+tre <- drop.tip(treA, testtaxa) 
+is.ultrametric(tre)
+
+COR2<-read.csv("trias_turtle.csv", header=TRUE, sep=";")
+	# for later convenience
+
+XA2 <- COR2[,4:11] #PCA Data
+
+#TRAINING DATASET
+
+gp <- g #grouping of the turtles by ecology categories
+col.gp <- brewer.pal(length(levels(gp)), "Set1")
+   names(col.gp) <- levels(gp)
+col.gp <- col.gp[match(gp, names(col.gp))] # col.gp must NOT be a factor
+
+t.lda <- lda(g ~ .,X)
+ 
+t.lda.values <- predict(t.lda)
+ldahist(t.lda.values$x[,1], g = g)
+
+#plot extant turtles
+
+ plot(t.lda.values$x[,1], t.lda.values$x[,2], pch=21, cex=2, col="black", bg=col.gp)
+
+text(t.lda.values$x[,1], t.lda.values$x[,2], cex = 0.7, pos = 4, col = col.gp)
+
+#predictions on fossils
+
+plda = predict(object = t.lda, # predictions
+        newdata = XA2)
+
+#class predictions
+plda$class
+
+# write tables
+write.csv(model$confusion, "ALLDATA_LDA_Cross-classification-confusion matrix.csv")
+write.csv(plda$class, "ALLDATA_LDA_prediction_matrix.csv")
+
+x<-as.data.frame(t.lda.values$class)
+x[,5] <- g
+x[,6] <- t.lda.values$class
+
+write.csv(x, "ALLDATA_LDA_VALUESLD_MATRIX.csv")
+
+##################
+
+lda_data <- rbind(t.lda.values$x, plda$x)
+
+write.csv(lda_data, "ALLDATA_LDA_LDA_VALUES_EXT_FOSS.csv")
+
+g3 <- as.factor(c(g, "6", "6", "6"))
+
+lda_data2 <- cbind(lda_data, g3)
+
+gp <- g3 #grouping of the turtles by ecology categories
+col.gp <- brewer.pal(length(levels(gp)), "Set1")
+   names(col.gp) <- levels(gp)
+col.gp2 <- col.gp[match(gp, names(col.gp))] # col.gp must NOT be a factor
+
+pdf('LDA_alldata.pdf')
+plot(lda_data2[,1], lda_data2[,2], pch=21, cex=2, col="black", bg=col.gp2)
+
+dev.off()
+
+write.csv(plda$posterior, "values_LDA_predictions_alldata.csv")

@@ -1,0 +1,161 @@
+######################################################################################
+##################################GPA AND PCA ANALYSIS###################################
+######################################################################################
+
+#allturtles <-read.table(file = "allturtlescrosssec.csv", header = F, sep=";", skip = 0, fill = TRUE))#open the document with the 3D array composed of all the landmarks and semilandmarks data
+
+#call packages
+library(rgl)
+library(geomorph)
+library(stats)
+library(RColorBrewer)
+
+#open sliders file
+curvesturtles<-as.matrix(read.table(file = "curves_slider_matrix.csv", header = F, sep=";", skip = 0, fill = TRUE))
+curvesturtles<- curvesturtles[-256:-340,-4:-8]
+
+#open species list (in the same order as the dataset)
+speclist<-read.table(file = "speclist.csv", header = T, sep=";", skip = 0, fill = TRUE)
+
+#open ecology list (in the same order as the dataset)
+ecology <- read.table(file = "ecology_web.csv", header = F, sep=";", skip = 0, fill = TRUE)
+ecology <- unlist(ecology, use.names=FALSE) #this step transform the dataset into "factors"
+
+dimnames(allturtles_all_data)[3] <- speclist	#name of the species are applied to the dataset
+
+#creation of the dataset, composed of the landmarks files, curves sliders, and ecology categories
+data.turtles <- list("land" = allturtles_all_data, "curves" = curvesturtles, "ecology" = ecology)
+str(data.turtles) #check that everything is in order
+
+#check for NA data
+is.na(data.turtles$land) 
+
+#if any, in which specimen data
+apply(is.na(data.turtles$land), 3, which)
+
+#if any missing data: estimation of missing data using TPS or Reg methods
+data.turtles$land <-estimate.missing(data.turtles$land, method = c("TPS","Reg"))
+
+######################################################################################
+##################################GENERALIZED PROCRUSTES ANALYSIS########################
+######################################################################################
+
+#Generalized Procrustes WITHOUT CURVES#
+
+#gpa.NC <-gpagen(data.turtles$land, Proj = TRUE, ProcD = FALSE)
+#plotOutliers(gpa.NC$coords) #check for extreme specimen and errors of data aquisition
+
+#Generalized Procrustes WITH CURVES#
+
+# Using bending energy for sliding
+gpa.Y <-gpagen(data.turtles$land, curves=data.turtles$curves, Proj = TRUE, ProcD = FALSE, max.iter=20)
+
+pdf('outliers_all_data.pdf')
+plotOutliers(gpa.Y$coords) #check for extreme specimen and errors of data acquisition
+dev.off()
+
+summary(gpa.Y) #consensus shape
+plot(gpa.Y)
+
+# Using Procrustes Distance for sliding
+#gpa.Y <-gpagen(data.turtles$land, curves=data.turtles$curves, Proj = #TRUE, ProcD = TRUE)
+
+#summary(gpa.Y) 
+#plot(gpa.Y)
+
+########Check specimens with problems######
+#ref<-mshape(gpa.Y$coords)
+#plotRefToTarget(ref,gpa.Y$coords[,,2],method="points", links=curvesturtles) #compare one specimen to the mean shape
+
+#Check consensus
+#plot3d(gpa.Y$consensus[,1], gpa.Y$consensus[,2], gpa.Y$consensus[,3], aspect="iso")
+
+######################################################################################
+##################################PRINCIPAL COMPONENT ANALYSIS###########################
+######################################################################################
+
+
+pdf('pca_alldata.pdf')
+gp <- data.turtles$ecology #grouping of the turtles by ecology categories
+col.gp <- brewer.pal(length(levels(gp)), "Set1")
+   names(col.gp) <- levels(gp)
+col.gp <- col.gp[match(gp, names(col.gp))] # col.gp must NOT be a factor
+
+pca.lands <- plotTangentSpace(gpa.Y$coords, groups = col.gp) #plot PCA and warpgrids
+	text(pca.lands$pc.scores[,1:2], rownames(pca.lands$pc.scores[,1:2]),pos=4,cex=.5)
+
+ #labels	
+dev.off()
+
+#Change color of the PCA groups#
+#col.gp <- rainbow((length(levels(pca.lands$ecology))))
+#  names(col.gp) <- levels(pca.lands$ecology)
+#col.gp <- col.gp[match(pca.lands$ecology, names(col.gp))] # col.gp must #not be a factor
+
+#plotTangentSpace(gpa.Y$coords, groups = col.gp)
+
+#PCA Summary#
+pca.lands$pc.summary
+#barplot(pca.lands$pc.summary$sdev^2/sum(pca.lands$pc.summary$sdev^2))
+
+#control the pca with plot PC1/PC2
+#plot(pca.lands$pc.scores[,1:2],pch=15,xlab="PC1",ylab="PC2")
+	text(pca.lands$pc.scores[,1:2],rownames(pca.lands$pc.scores[,1:2]),pos=4,cex=.5)
+
+#control the pca with plot PC2/PC3
+#plot(pca.lands$pc.scores[,2:3],pch=15,xlab="PC2",ylab="PC3")
+#	text(pca.lands$pc.scores[,2:3],rownames(pca.lands$pc.scores[,2:3]),pos=4,cex=.5)
+	
+	
+
+######################################################################################
+##################################HOW MUCH PCA DO WE KEEP ?##############################
+######################################################################################
+
+#http://rfunctions.blogspot.com/2015/01/pca-principal-component-analysis.html
+
+pca.lands
+summary(pca.lands)
+loadings <-pca.lands$rotation	# The loadings (or eigenvectors) are simply our rotation values.
+
+ev <- pca.lands$sdev^2 #eigenvalues
+
+####SOURCE :
+# Plot eigenvalues and percentages of variation of an ordination object
+# Kaiser rule and broken stick model
+# Usage:
+# evplot(ev)
+# where ev is a vector of eigenvalues
+ 
+# License: GPL-2 
+# Author: Francois Gillet, 25 August 2012
+ 
+evplot <- function(ev)
+{
+	# Broken stick model (MacArthur 1957)
+	n <- length(ev)
+	bsm <- data.frame(j=seq(1:n), p=0)
+	bsm$p[1] <- 1/n
+	for (i in 2:n) bsm$p[i] <- bsm$p[i-1] + (1/(n + 1 - i))
+	bsm$p <- 100*bsm$p/n
+	# Plot eigenvalues and % of variation for each axis
+	op <- par(mfrow=c(2,1))
+	barplot(ev, main="Eigenvalues", col="bisque", las=2)
+	abline(h=mean(ev), col="red")
+	legend("topright", "Average eigenvalue", lwd=1, col=2, bty="n")
+	barplot(t(cbind(100*ev/sum(ev), bsm$p[n:1])), beside=TRUE, 
+		main="% variation", col=c("bisque",2), las=2)
+	legend("topright", c("% eigenvalue", "Broken stick model"), 
+		pch=15, col=c("bisque",2), bty="n")
+	par(op)
+}
+
+pdf('evplot_alldata.pdf')
+evplot(ev)
+dev.off()
+
+#save the PC Data
+write.csv(pca.lands$pc.scores, file = "pca_allturtles_alldata.csv")
+#write.csv(pca.lands$pc.summary, file = "standard_dev_alldata.csv")
+
+
