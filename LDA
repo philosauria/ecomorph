@@ -8,13 +8,8 @@ library(RColorBrew)
 #read PC Data and ecology categories
 COR<-read.csv("pca_allturtles_alldata.csv", header=TRUE, sep=";")#5cat
 
-CORN <- COR$species
-names (CORN) <- COR$species
-
-CORorder<-COR[match(treA$tip.label, names(CORN)),]
-
-ddA <- CORorder
-#rownames(ddA) <- ddA$species
+ddA <- COR$species
+names (ddA) <- COR$species
 
 ############################
 gA <- ddA$ecology 	#Grouping
@@ -30,13 +25,12 @@ trainingtaxa <- rownames(ddA[-testtaxan,])
 X <- XA[-testtaxan,]
 dd <- ddA[-testtaxan,]
 g <- gA[-testtaxan]
-tre <- drop.tip(treA, testtaxa) 
-is.ultrametric(tre)
+
 
 COR2<-read.csv("trias_turtle.csv", header=TRUE, sep=";")
 	# for later convenience
 
-XA2 <- COR2[,4:11] #PCA Data
+XA2 <- COR2[,4:11] #PCA Data (nb is defined bw the brokenstick method)
 
 #TRAINING DATASET
 
